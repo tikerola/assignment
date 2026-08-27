@@ -1,0 +1,5 @@
+pytest==9.1.1
+pytest-playwright==0.9.0
+pytest-rerunfailures==16.6
+pytest-xdist==3.8.0
+pytest-html==4.2.0
