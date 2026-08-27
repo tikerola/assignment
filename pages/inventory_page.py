@@ -1,0 +1,91 @@
+"""Inventory / product list page (`/inventory.html`)."""
+
+import re
+from decimal import Decimal
+
+from pages.base_page import BasePage
+
+
+class InventoryItem:
+    """One product card, scoped from InventoryPage.items."""
+
+    def __init__(self, card):
+        self._card = card
+
+    @property
+    def name(self):
+        return self._card.get_by_test_id("inventory-item-name")
+
+    @property
+    def description(self):
+        return self._card.get_by_test_id("inventory-item-desc")
+
+    @property
+    def price(self):
+        return self._card.get_by_test_id("inventory-item-price")
+
+    @property
+    def image(self):
+        # Each product's image data-test is itself product-specific, so fall back to the CSS
+        # class here, same as InventoryPage.item_images below.
+        return self._card.locator(".inventory_item_img img")
+
+    @property
+    def add_to_cart_button(self):
+        return self._card.get_by_role("button", name="Add to cart")
+
+    def wait_for_image_loaded(self, timeout: float | None = None):
+        """Waits until the image has actually rendered real pixel content, not just a src
+        attribute (a broken/404 image reports a non-empty src too)."""
+        self.image.page.wait_for_function(
+            "(img) => img.complete && img.naturalWidth > 0",
+            arg=self.image.element_handle(),
+            timeout=timeout,
+        )
+
+
+class InventoryPage(BasePage):
+    URL = "/inventory.html"
+
+    @property
+    def sort_dropdown(self):
+        return self.page.get_by_test_id("product-sort-container")
+
+    @property
+    def item_cards(self):
+        return self.page.get_by_test_id("inventory-item")
+
+    @property
+    def items(self) -> list[InventoryItem]:
+        return [InventoryItem(self.item_cards.nth(i)) for i in range(self.item_cards.count())]
+
+    @property
+    def item_names(self):
+        return self.page.get_by_test_id("inventory-item-name")
+
+    @property
+    def item_prices(self):
+        return self.page.get_by_test_id("inventory-item-price")
+
+    @property
+    def item_price_values(self) -> list[Decimal]:
+        """Item prices as decimals, e.g. "$29.99" -> Decimal("29.99")."""
+        return [Decimal(p.replace("$", "")) for p in self.item_prices.all_inner_texts()]
+
+    @property
+    def item_images(self):
+        return self.page.locator(".inventory_item_img img")
+
+    def add_item_at(self, index: int):
+        self.item_cards.nth(index).get_by_role("button", name="Add to cart").click()
+
+    def remove_item_at(self, index: int):
+        self.item_cards.nth(index).get_by_role("button", name="Remove").click()
+
+    def open_item_at(self, index: int):
+        # Suffix match avoids ambiguity with the image link, which shares the same accessible name.
+        self.item_cards.nth(index).get_by_test_id(re.compile(r"title-link$")).click()
+
+    def sort_by(self, value: str):
+        """value: one of 'az', 'za', 'lohi', 'hilo' (the select element's option values)."""
+        self.sort_dropdown.select_option(value)
