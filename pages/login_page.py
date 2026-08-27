@@ -2,12 +2,14 @@
 
 
 class LoginPage:
+    URL = "/"
+
     def __init__(self, page):
         self.page = page
 
     def open(self):
         # Resolves against pytest.ini's base_url setting, not a hardcoded absolute URL.
-        self.page.goto("/")
+        self.page.goto(self.URL)
 
     @property
     def username_input(self):
