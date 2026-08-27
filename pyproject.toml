@@ -1,0 +1,14 @@
+[tool.ruff]
+extend-exclude = [".venv"]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # Pyflakes
+    "W",  # pycodestyle warnings
+    "I",  # import sorting
+]
+
+[tool.ruff.format]
+quote-style = "double"
