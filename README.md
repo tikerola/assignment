@@ -45,7 +45,9 @@ TEST_PASSWORD=<password from the SauceDemo login page>
 ## Running the tests
 
 Run the full suite with a single command (parallelized across CPU cores).
-A self-contained HTML report is written to `results/report.html` on every run:
+A self-contained HTML report is written to `results/report.html` on every run;
+any failing test also gets a screenshot, video, and Playwright trace embedded
+directly in its report row:
 
 ```bash
 pytest -n=auto

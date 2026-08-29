@@ -1,5 +1,11 @@
+import base64
+import hashlib
+from pathlib import Path
+
 import pytest
 from playwright.sync_api import expect
+from pytest_html import extras as html_extras
+from slugify import slugify
 
 import config
 from pages.inventory_page import InventoryPage
@@ -8,6 +14,54 @@ from tests.data.users import USERS
 
 # Where a successful login redirects to.
 LANDING_PAGE = InventoryPage.URL
+
+
+def _artifact_test_folder(item: pytest.Item) -> Path:
+    """Where pytest-playwright saves this test's screenshot/video/trace (mirrors its own
+    `output_path` fixture, which isn't public API but is the exact logic it uses internally)."""
+    output_dir = Path(item.config.getoption("--output")).absolute()
+    file_name = slugify(item.nodeid)
+    if len(file_name) >= 256:
+        digest = hashlib.sha256(file_name.encode()).hexdigest()[:7]
+        file_name = f"{file_name[:100]}-{digest}-{file_name[-100:]}"
+    return output_dir / file_name
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Attach pytest-playwright's failure screenshot/video/trace to the pytest-html report.
+
+    Must run at the "teardown" phase, not "call": pytest-playwright doesn't save these
+    artifacts to disk until its own fixture teardown runs, which happens after the call
+    phase (and its report) is already finalized.
+    """
+    outcome = yield
+    report = outcome.get_result()
+    if report.when != "teardown":
+        return
+
+    folder = _artifact_test_folder(item)
+    if not folder.is_dir():
+        return
+
+    extra = list(getattr(report, "extras", []))
+    for screenshot in sorted(folder.glob("*.png")):
+        extra.append(html_extras.image(base64.b64encode(screenshot.read_bytes()).decode()))
+    for video in sorted(folder.glob("*.webm")):
+        extra.append(
+            html_extras.video(
+                base64.b64encode(video.read_bytes()).decode(),
+                mime_type="video/webm",
+                extension="webm",
+            )
+        )
+    for trace in sorted(folder.glob("*.zip")):
+        data = base64.b64encode(trace.read_bytes()).decode()
+        extra.append(
+            html_extras.url(f"data:application/zip;base64,{data}", name=f"Trace: {trace.name}")
+        )
+    if extra:
+        report.extras = extra
 
 
 @pytest.fixture(scope="session")
