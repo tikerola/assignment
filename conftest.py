@@ -58,14 +58,19 @@ def pytest_runtest_makereport(item, call):
         # and never updates it, so a real .webm source is rejected outright (NETWORK_NO_SOURCE,
         # duration stuck at 0) -- confirmed in-browser. A plain <video src="..."> lets the
         # browser sniff the real container/codec instead of trusting a wrong declared type.
-        # display:block !important: pytest-html's own carousel JS does
-        # resultBody.querySelector('video') to find ITS video slot, and since this tag is the
-        # first <video> in the row, its code mistakes this one for that slot and applies its
-        # own .hidden class (display:none) to it -- confirmed in-browser.
+        # The wrapper div reproduces pytest-html's own div.media box (border/float/size) so this
+        # sits in the same small floated box as the screenshot instead of full native resolution
+        # as its own block -- confirmed in-browser. display:block !important on the <video> itself
+        # is needed separately: pytest-html's carousel JS does resultBody.querySelector('video')
+        # to find ITS video slot, and since this tag is the first <video> in the row, its code
+        # mistakes this one for that slot and applies its own .hidden class (display:none) to it.
         extra.append(
             html_extras.html(
-                '<video controls style="max-width:100%;display:block !important" '
-                f'src="{_rel_href(video)}">'
+                '<div style="border:1px solid #e6e6e6;float:right;height:240px;'
+                'margin:0 5px;overflow:hidden;width:320px">'
+                '<video controls style="width:100%;height:100%;object-fit:cover;'
+                f'display:block !important" src="{_rel_href(video)}">'
+                "</video></div>"
             )
         )
     for trace in sorted(folder.glob("*.zip")):
