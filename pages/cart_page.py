@@ -4,6 +4,7 @@ import re
 from decimal import Decimal
 
 from pages.base_page import BasePage
+from pages.money import parse_price
 
 
 class CartPage(BasePage):
@@ -18,7 +19,7 @@ class CartPage(BasePage):
     @property
     def item_price_values(self) -> list[Decimal]:
         """Item prices as decimals, e.g. "$29.99" -> Decimal("29.99")."""
-        return [Decimal(p.replace("$", ""))
+        return [parse_price(p)
                 for p in self.page.get_by_test_id("inventory-item-price").all_inner_texts()]
 
     @property

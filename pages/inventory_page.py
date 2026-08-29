@@ -4,6 +4,7 @@ import re
 from decimal import Decimal
 
 from pages.base_page import BasePage
+from pages.money import parse_price
 
 
 class InventoryItem:
@@ -27,7 +28,7 @@ class InventoryItem:
     @property
     def price_value(self) -> Decimal:
         """Item price as a decimal, e.g. "$29.99" -> Decimal("29.99")."""
-        return Decimal(self.price.inner_text().replace("$", ""))
+        return parse_price(self.price.inner_text())
 
     @property
     def image(self):
@@ -75,7 +76,7 @@ class InventoryPage(BasePage):
     @property
     def item_price_values(self) -> list[Decimal]:
         """Item prices as decimals, e.g. "$29.99" -> Decimal("29.99")."""
-        return [Decimal(p.replace("$", "")) for p in self.item_prices.all_inner_texts()]
+        return [parse_price(p) for p in self.item_prices.all_inner_texts()]
 
     @property
     def item_images(self):

@@ -1,11 +1,9 @@
 """Checkout step two / overview page (`/checkout-step-two.html`)."""
 
-import re
 from decimal import Decimal
 
 from pages.base_page import BasePage
-
-_PRICE_RE = re.compile(r"\$(\d+\.\d{2})")
+from pages.money import parse_price
 
 
 class CheckoutStepTwoPage(BasePage):
@@ -20,7 +18,7 @@ class CheckoutStepTwoPage(BasePage):
     @property
     def item_price_values(self) -> list[Decimal]:
         """Item prices as decimals, e.g. "$29.99" -> Decimal("29.99")."""
-        return [Decimal(p.replace("$", ""))
+        return [parse_price(p)
                 for p in self.page.get_by_test_id("inventory-item-price").all_inner_texts()]
 
     @property
@@ -45,15 +43,15 @@ class CheckoutStepTwoPage(BasePage):
 
     @property
     def subtotal_value(self) -> Decimal:
-        return Decimal(_PRICE_RE.search(self.subtotal_label.inner_text()).group(1))
+        return parse_price(self.subtotal_label.inner_text())
 
     @property
     def tax_value(self) -> Decimal:
-        return Decimal(_PRICE_RE.search(self.tax_label.inner_text()).group(1))
+        return parse_price(self.tax_label.inner_text())
 
     @property
     def total_value(self) -> Decimal:
-        return Decimal(_PRICE_RE.search(self.total_label.inner_text()).group(1))
+        return parse_price(self.total_label.inner_text())
 
     @property
     def cancel_button(self):
