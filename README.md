@@ -68,9 +68,19 @@ Run the full regression suite explicitly:
 pytest -m regression -n=auto
 ```
 
+## Continuous integration
+
+`.github/workflows/tests.yml` runs the full suite on every push and pull
+request to `master`, then uploads `results/` (report, screenshots, videos,
+traces for any failures) as a workflow artifact -- download it from the
+run's Summary page under Artifacts. Add a repository secret named
+`TEST_PASSWORD` (Settings → Secrets and variables → Actions) with the same
+value as your local `.env` before the workflow can log in.
+
 ## Project structure
 
 - `pages/` — Page Object classes, one per SauceDemo page
 - `tests/` — the test suite
+- `.github/workflows/tests.yml` — CI: runs the suite and uploads the report
 - `test_design.md` — what's tested and why
 - `ai_usage.md` — how AI was used in this assignment
