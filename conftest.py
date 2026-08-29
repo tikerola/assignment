@@ -45,15 +45,27 @@ def pytest_runtest_makereport(item, call):
     if not folder.is_dir():
         return
 
+    html_dir = Path(item.config.getoption("htmlpath")).resolve().parent
+
+    def _rel_href(path: Path) -> str:
+        return Path(os.path.relpath(path.resolve(), html_dir)).as_posix()
+
     extra = list(getattr(report, "extras", []))
     for screenshot in sorted(folder.glob("*.png")):
         extra.append(html_extras.image(base64.b64encode(screenshot.read_bytes()).decode()))
     for video in sorted(folder.glob("*.webm")):
+        # Not extras.video(): pytest-html's player template hardcodes <source type="video/mp4">
+        # and never updates it, so a real .webm source is rejected outright (NETWORK_NO_SOURCE,
+        # duration stuck at 0) -- confirmed in-browser. A plain <video src="..."> lets the
+        # browser sniff the real container/codec instead of trusting a wrong declared type.
+        # display:block !important: pytest-html's own carousel JS does
+        # resultBody.querySelector('video') to find ITS video slot, and since this tag is the
+        # first <video> in the row, its code mistakes this one for that slot and applies its
+        # own .hidden class (display:none) to it -- confirmed in-browser.
         extra.append(
-            html_extras.video(
-                base64.b64encode(video.read_bytes()).decode(),
-                mime_type="video/webm",
-                extension="webm",
+            html_extras.html(
+                '<video controls style="max-width:100%;display:block !important" '
+                f'src="{_rel_href(video)}">'
             )
         )
     for trace in sorted(folder.glob("*.zip")):
@@ -61,11 +73,9 @@ def pytest_runtest_makereport(item, call):
         # to be a data: URI, and a plain `target="_blank"` link to one gets blocked by browsers
         # (top-level navigation to data: is treated as a phishing risk) and lands on
         # about:blank -- open the downloaded file at https://trace.playwright.dev.
-        html_dir = Path(item.config.getoption("htmlpath")).resolve().parent
-        rel_href = Path(os.path.relpath(trace.resolve(), html_dir)).as_posix()
         extra.append(
             html_extras.html(
-                f'<a download="{trace.name}" href="{rel_href}">'
+                f'<a download="{trace.name}" href="{_rel_href(trace)}">'
                 f"Download {trace.name} (open at trace.playwright.dev)</a>"
             )
         )
