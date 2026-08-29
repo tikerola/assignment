@@ -14,8 +14,10 @@ pytestmark = pytest.mark.regression
         ("", ""),
         (USERS["standard"], "wrong_password"),
         ("fake_user", config.PASSWORD),
+        (USERS["locked"], config.PASSWORD),
     ],
-    ids=["empty_credentials", "real_user_wrong_password", "fake_user_real_password"],
+    ids=["empty_credentials", "real_user_wrong_password", "fake_user_real_password",
+        "locked_user_with_password"],
 )
 def test_login_with_invalid_credentials(page, username, password):
     login_page = LoginPage(page)

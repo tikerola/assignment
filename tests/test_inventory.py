@@ -1,11 +1,7 @@
-import re
 
 import pytest
-from playwright.sync_api import expect
 
-from conftest import _get_page_for_user
 from pages.inventory_page import InventoryPage
-from pages.product_detail_page import ProductDetailPage
 
 pytestmark = pytest.mark.regression
 
