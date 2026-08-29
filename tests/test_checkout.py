@@ -53,3 +53,31 @@ def test_happy_path_full_purchase_with_price_verification(logged_in_page):
     complete = CheckoutCompletePage(logged_in_page)
     expect(complete.header).to_have_text("Thank you for your order!")
     expect(complete.complete_text).to_be_visible()
+
+
+@pytest.mark.parametrize(
+    "first_name, last_name, postal_code, expected_error",
+    [
+        ("", "Doe", "12345", "Error: First Name is required"),
+        ("John", "", "12345", "Error: Last Name is required"),
+        ("John", "Doe", "", "Error: Postal Code is required"),
+        ("", "", "", "Error: First Name is required"),
+    ],
+    ids=["missing_first_name", "missing_last_name", "missing_postal_code", "all_fields_empty"],
+)
+def test_checkout_requires_customer_information(
+    logged_in_page, first_name, last_name, postal_code, expected_error
+):
+    inventory = InventoryPage(logged_in_page)
+    inventory.add_items_at([0])
+    inventory.open_cart()
+
+    cart = CartPage(logged_in_page)
+    cart.checkout()
+
+    step_one = CheckoutStepOnePage(logged_in_page)
+    step_one.fill_info(first_name, last_name, postal_code)
+    step_one.continue_to_overview()
+
+    expect(step_one.error_message).to_have_text(expected_error)
+    expect(logged_in_page).to_have_url(CheckoutStepOnePage.URL)

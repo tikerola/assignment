@@ -4,6 +4,8 @@ from pages.base_page import BasePage
 
 
 class CheckoutStepOnePage(BasePage):
+    URL = "/checkout-step-one.html"
+
     @property
     def first_name_input(self):
         return self.page.get_by_test_id("firstName")
