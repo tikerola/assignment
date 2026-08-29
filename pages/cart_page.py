@@ -1,6 +1,7 @@
 """Cart page (`/cart.html`)."""
 
 import re
+from decimal import Decimal
 
 from pages.base_page import BasePage
 
@@ -9,6 +10,16 @@ class CartPage(BasePage):
     @property
     def cart_items(self):
         return self.page.get_by_test_id("inventory-item")
+
+    @property
+    def item_names(self):
+        return self.page.get_by_test_id("inventory-item-name")
+
+    @property
+    def item_price_values(self) -> list[Decimal]:
+        """Item prices as decimals, e.g. "$29.99" -> Decimal("29.99")."""
+        return [Decimal(p.replace("$", ""))
+                for p in self.page.get_by_test_id("inventory-item-price").all_inner_texts()]
 
     @property
     def checkout_button(self):

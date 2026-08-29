@@ -1,0 +1,55 @@
+from decimal import ROUND_HALF_UP, Decimal
+
+import pytest
+from playwright.sync_api import expect
+
+from pages.cart_page import CartPage
+from pages.checkout_complete_page import CheckoutCompletePage
+from pages.checkout_step_one_page import CheckoutStepOnePage
+from pages.checkout_step_two_page import CheckoutStepTwoPage
+from pages.inventory_page import InventoryPage
+
+pytestmark = pytest.mark.regression
+
+# SauceDemo applies an 8% tax rate.
+TAX_RATE = Decimal("0.08")
+
+
+@pytest.mark.smoke
+def test_happy_path_full_purchase_with_price_verification(logged_in_page):
+    inventory = InventoryPage(logged_in_page)
+
+    selected_items = inventory.add_items_at([0, 1, 2])
+    expected_names = [item.name.inner_text() for item in selected_items]
+    expected_prices = [item.price_value for item in selected_items]
+
+    expect(inventory.cart_badge).to_have_text(str(len(selected_items)))
+
+    inventory.open_cart()
+    cart = CartPage(logged_in_page)
+    expect(cart.cart_items).to_have_count(len(selected_items))
+    assert cart.item_names.all_inner_texts() == expected_names
+    assert cart.item_price_values == expected_prices
+
+    cart.checkout()
+    step_one = CheckoutStepOnePage(logged_in_page)
+    step_one.fill_info("Lucky", "Luke", "00100")
+    step_one.continue_to_overview()
+
+    step_two = CheckoutStepTwoPage(logged_in_page)
+    expect(step_two.cart_items).to_have_count(len(selected_items))
+    assert step_two.item_names.all_inner_texts() == expected_names
+    assert step_two.item_price_values == expected_prices
+
+    expected_subtotal = sum(expected_prices)
+    expected_tax = (expected_subtotal * TAX_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    assert step_two.subtotal_value == expected_subtotal
+    assert step_two.tax_value == expected_tax
+    assert step_two.total_value == expected_subtotal + expected_tax
+
+    step_two.finish()
+
+    complete = CheckoutCompletePage(logged_in_page)
+    expect(complete.header).to_have_text("Thank you for your order!")
+    expect(complete.complete_text).to_be_visible()
