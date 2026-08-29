@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import os
 from pathlib import Path
@@ -28,6 +27,63 @@ def _artifact_test_folder(item: pytest.Item) -> Path:
     return output_dir / file_name
 
 
+def _media_slide(kind: str, href: str, active: bool) -> str:
+    style = f"width:100%;height:100%;object-fit:cover;{'' if active else 'display:none'}"
+    if kind == "image":
+        return (
+            f'<a href="{href}" target="_blank">'
+            f'<img class="rr-slide" src="{href}" style="{style}"></a>'
+        )
+    return f'<video class="rr-slide" controls style="{style}" src="{href}"></video>'
+
+
+def _move_js(direction: int, n: int) -> str:
+    """Cycles .rr-slide children by `direction`, tracking position in the box's own data-idx --
+    no external <script> needed: inline onclick attributes execute fine even in HTML inserted via
+    insertAdjacentHTML (confirmed in-browser), unlike an inserted <script> tag, which wouldn't."""
+    return (
+        "var b=this.closest('.rr-media');"
+        "var s=b.querySelectorAll('.rr-slide');"
+        f"var i=(parseInt(b.dataset.idx||'0')+({direction})+{n})%{n};"
+        "b.dataset.idx=i;"
+        "s.forEach(function(el,j){"
+        "if(j===i){el.style.display=''}else{el.style.display='none';"
+        "if(el.tagName==='VIDEO')el.pause();}"
+        "});"
+        f"b.querySelector('.rr-cnt').textContent=(i+1)+' / {n}';"
+    )
+
+
+def _media_box_html(slides: list[tuple[str, str]]) -> str:
+    """One small box (pytest-html's own div.media footprint: bordered, floated right, 320x240)
+    cycling through every failure screenshot/video with </>, like its native carousel -- can't
+    reuse that carousel because its <video> slot hardcodes <source type="video/mp4"> and rejects
+    a real .webm outright (see the per-format loop in pytest_runtest_makereport)."""
+    if not slides:
+        return ""
+    n = len(slides)
+    viewport = "".join(
+        _media_slide(kind, href, active=(i == 0)) for i, (kind, href) in enumerate(slides)
+    )
+    if n == 1:
+        return (
+            '<div style="border:1px solid #e6e6e6;float:right;height:240px;'
+            f'margin:0 5px;width:320px;overflow:hidden">{viewport}</div>'
+        )
+    return (
+        '<div class="rr-media" data-idx="0" style="border:1px solid #e6e6e6;float:right;'
+        'height:240px;margin:0 5px;width:320px;overflow:hidden">'
+        '<div style="display:grid;grid-template-columns:25px auto 25px;'
+        'align-items:center;height:200px">'
+        f'<div style="cursor:pointer;text-align:center" onclick="{_move_js(-1, n)}">&lt;</div>'
+        f'<div style="height:inherit">{viewport}</div>'
+        f'<div style="cursor:pointer;text-align:center" onclick="{_move_js(1, n)}">&gt;</div>'
+        "</div>"
+        f'<div class="rr-cnt" style="text-align:center">1 / {n}</div>'
+        "</div>"
+    )
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """Attach pytest-playwright's failure screenshot/video/trace to the pytest-html report.
@@ -51,28 +107,11 @@ def pytest_runtest_makereport(item, call):
         return Path(os.path.relpath(path.resolve(), html_dir)).as_posix()
 
     extra = list(getattr(report, "extras", []))
-    for screenshot in sorted(folder.glob("*.png")):
-        extra.append(html_extras.image(base64.b64encode(screenshot.read_bytes()).decode()))
-    for video in sorted(folder.glob("*.webm")):
-        # Not extras.video(): pytest-html's player template hardcodes <source type="video/mp4">
-        # and never updates it, so a real .webm source is rejected outright (NETWORK_NO_SOURCE,
-        # duration stuck at 0) -- confirmed in-browser. A plain <video src="..."> lets the
-        # browser sniff the real container/codec instead of trusting a wrong declared type.
-        # The wrapper div reproduces pytest-html's own div.media box (border/float/size) so this
-        # sits in the same small floated box as the screenshot instead of full native resolution
-        # as its own block -- confirmed in-browser. display:block !important on the <video> itself
-        # is needed separately: pytest-html's carousel JS does resultBody.querySelector('video')
-        # to find ITS video slot, and since this tag is the first <video> in the row, its code
-        # mistakes this one for that slot and applies its own .hidden class (display:none) to it.
-        extra.append(
-            html_extras.html(
-                '<div style="border:1px solid #e6e6e6;float:right;height:240px;'
-                'margin:0 5px;overflow:hidden;width:320px">'
-                '<video controls style="width:100%;height:100%;object-fit:cover;'
-                f'display:block !important" src="{_rel_href(video)}">'
-                "</video></div>"
-            )
-        )
+    slides = [("image", _rel_href(p)) for p in sorted(folder.glob("*.png"))]
+    slides += [("video", _rel_href(p)) for p in sorted(folder.glob("*.webm"))]
+    media_html = _media_box_html(slides)
+    if media_html:
+        extra.append(html_extras.html(media_html))
     for trace in sorted(folder.glob("*.zip")):
         # A plain relative link, not extras.url(): with --self-contained-html this would need
         # to be a data: URI, and a plain `target="_blank"` link to one gets blocked by browsers
