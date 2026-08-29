@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import os
 from pathlib import Path
 
 import pytest
@@ -56,14 +57,15 @@ def pytest_runtest_makereport(item, call):
             )
         )
     for trace in sorted(folder.glob("*.zip")):
-        # Not extras.url(): a plain `target="_blank"` link to a data: URI gets blocked by
-        # browsers (top-level navigation to data: is treated as a phishing risk) and lands on
-        # about:blank. `download` exempts the click from that, since it saves rather than
-        # navigates -- open the saved file at https://trace.playwright.dev.
-        data = base64.b64encode(trace.read_bytes()).decode()
+        # A plain relative link, not extras.url(): with --self-contained-html this would need
+        # to be a data: URI, and a plain `target="_blank"` link to one gets blocked by browsers
+        # (top-level navigation to data: is treated as a phishing risk) and lands on
+        # about:blank -- open the downloaded file at https://trace.playwright.dev.
+        html_dir = Path(item.config.getoption("htmlpath")).resolve().parent
+        rel_href = Path(os.path.relpath(trace.resolve(), html_dir)).as_posix()
         extra.append(
             html_extras.html(
-                f'<a download="{trace.name}" href="data:application/zip;base64,{data}">'
+                f'<a download="{trace.name}" href="{rel_href}">'
                 f"Download {trace.name} (open at trace.playwright.dev)</a>"
             )
         )

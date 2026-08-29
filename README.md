@@ -45,9 +45,12 @@ TEST_PASSWORD=<password from the SauceDemo login page>
 ## Running the tests
 
 Run the full suite with a single command (parallelized across CPU cores).
-A self-contained HTML report is written to `results/report.html` on every run;
-any failing test also gets a screenshot, video, and Playwright trace embedded
-directly in its report row:
+An HTML report is written to `results/report.html` on every run (along with
+its `results/assets/` folder, so keep the two together when sharing it); any
+failing test also gets a screenshot, video, and downloadable Playwright trace
+attached directly to its report row -- click the screenshot to view it full
+size, or download the trace and open it at
+[trace.playwright.dev](https://trace.playwright.dev):
 
 ```bash
 pytest -n=auto
