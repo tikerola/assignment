@@ -56,9 +56,16 @@ def pytest_runtest_makereport(item, call):
             )
         )
     for trace in sorted(folder.glob("*.zip")):
+        # Not extras.url(): a plain `target="_blank"` link to a data: URI gets blocked by
+        # browsers (top-level navigation to data: is treated as a phishing risk) and lands on
+        # about:blank. `download` exempts the click from that, since it saves rather than
+        # navigates -- open the saved file at https://trace.playwright.dev.
         data = base64.b64encode(trace.read_bytes()).decode()
         extra.append(
-            html_extras.url(f"data:application/zip;base64,{data}", name=f"Trace: {trace.name}")
+            html_extras.html(
+                f'<a download="{trace.name}" href="data:application/zip;base64,{data}">'
+                f"Download {trace.name} (open at trace.playwright.dev)</a>"
+            )
         )
     if extra:
         report.extras = extra
