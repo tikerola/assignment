@@ -8,6 +8,8 @@ from pages.money import parse_price
 
 
 class CartPage(BasePage):
+    URL = "/cart.html"
+
     @property
     def cart_items(self):
         return self.page.get_by_test_id("inventory-item")

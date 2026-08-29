@@ -81,3 +81,20 @@ def test_checkout_requires_customer_information(
 
     expect(step_one.error_message).to_have_text(expected_error)
     expect(logged_in_page).to_have_url(CheckoutStepOnePage.URL)
+
+
+@pytest.mark.xfail(
+    reason="saucedemo does not block checkout with an empty cart -- documenting this as a known "
+    "gap on the assumption that a zero-item order would carry real business impact "
+    "(invoicing, fulfillment, reporting) in a production system",
+    strict=True,
+)
+def test_checkout_blocks_empty_cart(logged_in_page):
+    inventory = InventoryPage(logged_in_page)
+    inventory.open_cart()
+
+    cart = CartPage(logged_in_page)
+    expect(cart.cart_items).to_have_count(0)
+    cart.checkout()
+
+    expect(logged_in_page).to_have_url(CartPage.URL)
