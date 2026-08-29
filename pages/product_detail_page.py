@@ -1,6 +1,9 @@
 """Product detail page (`/inventory-item.html?id=N`)."""
 
+from decimal import Decimal
+
 from pages.base_page import BasePage
+from pages.money import parse_price
 
 
 class ProductDetailPage(BasePage):
@@ -15,6 +18,11 @@ class ProductDetailPage(BasePage):
     @property
     def item_price(self):
         return self.page.get_by_test_id("inventory-item-price")
+
+    @property
+    def item_price_value(self) -> Decimal:
+        """Item price as a decimal, e.g. "$29.99" -> Decimal("29.99")."""
+        return parse_price(self.item_price.inner_text())
 
     @property
     def add_to_cart_button(self):
