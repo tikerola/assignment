@@ -1,3 +1,4 @@
+import random
 from decimal import ROUND_HALF_UP, Decimal
 
 import pytest
@@ -19,7 +20,14 @@ TAX_RATE = Decimal("0.08")
 def test_happy_path_full_purchase_with_price_verification(logged_in_page):
     inventory = InventoryPage(logged_in_page)
 
-    selected_items = inventory.add_items_at([0, 1, 2])
+    # Random 3 of the full catalog, not a fixed [0, 1, 2] -- rotates coverage across every
+    # product's image/name/price over repeated runs instead of always exercising the same three.
+    item_count = len(inventory.items)
+    assert item_count >= 3, f"Expected at least 3 products in the catalog, found {item_count}"
+    indexes = random.sample(range(item_count), 3)
+    selected_items = inventory.add_items_at(indexes)
+    for item in selected_items:
+        item.wait_for_image_loaded()
     expected_names = [item.name.inner_text() for item in selected_items]
     expected_prices = [item.price_value for item in selected_items]
 

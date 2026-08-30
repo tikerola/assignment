@@ -3,6 +3,8 @@
 import re
 from decimal import Decimal
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from pages.money import parse_price
 
@@ -43,11 +45,16 @@ class InventoryItem:
     def wait_for_image_loaded(self, timeout: float | None = None):
         """Waits until the image has actually rendered real pixel content, not just a src
         attribute (a broken/404 image reports a non-empty src too)."""
-        self.image.page.wait_for_function(
-            "(img) => img.complete && img.naturalWidth > 0",
-            arg=self.image.element_handle(),
-            timeout=timeout,
-        )
+        try:
+            self.image.page.wait_for_function(
+                "(img) => img.complete && img.naturalWidth > 0",
+                arg=self.image.element_handle(),
+                timeout=timeout,
+            )
+        except PlaywrightTimeoutError as e:
+            raise AssertionError(
+                f"Image never loaded for product '{self.name.inner_text()}'"
+            ) from e
 
 
 class InventoryPage(BasePage):
