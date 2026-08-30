@@ -20,10 +20,6 @@ class InventoryItem:
         return self._card.get_by_test_id("inventory-item-name")
 
     @property
-    def description(self):
-        return self._card.get_by_test_id("inventory-item-desc")
-
-    @property
     def price(self):
         return self._card.get_by_test_id("inventory-item-price")
 
@@ -35,7 +31,7 @@ class InventoryItem:
     @property
     def image(self):
         # Each product's image data-test is itself product-specific, so fall back to the CSS
-        # class here, same as InventoryPage.item_images below.
+        # class here.
         return self._card.locator(".inventory_item_img img")
 
     @property
@@ -84,13 +80,6 @@ class InventoryPage(BasePage):
     def item_price_values(self) -> list[Decimal]:
         """Item prices as decimals, e.g. "$29.99" -> Decimal("29.99")."""
         return [parse_price(p) for p in self.item_prices.all_inner_texts()]
-
-    @property
-    def item_images(self):
-        return self.page.locator(".inventory_item_img img")
-
-    def add_item_at(self, index: int):
-        self.item_cards.nth(index).get_by_role("button", name="Add to cart").click()
 
     def add_items_at(self, indexes: list[int]) -> list[InventoryItem]:
         """Adds each indexed item to the cart, returning them in the same order for the

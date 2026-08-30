@@ -23,10 +23,6 @@ class CheckoutStepOnePage(BasePage):
         return self.page.get_by_test_id("error")
 
     @property
-    def cancel_button(self):
-        return self.page.get_by_test_id("cancel")
-
-    @property
     def continue_button(self):
         return self.page.get_by_test_id("continue")
 
@@ -37,6 +33,3 @@ class CheckoutStepOnePage(BasePage):
 
     def continue_to_overview(self):
         self.continue_button.click()
-
-    def cancel(self):
-        self.cancel_button.click()
