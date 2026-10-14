@@ -6,6 +6,7 @@ from decimal import Decimal
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
+from pages.components.inventory_row_list import InventoryRowList
 from pages.money import parse_price
 
 
@@ -56,13 +57,17 @@ class InventoryItem:
 class InventoryPage(BasePage):
     URL = "/inventory.html"
 
+    def __init__(self, page):
+        super().__init__(page)
+        self._rows = InventoryRowList(page)
+
     @property
     def sort_dropdown(self):
         return self.page.get_by_test_id("product-sort-container")
 
     @property
     def item_cards(self):
-        return self.page.get_by_test_id("inventory-item")
+        return self._rows.cards
 
     @property
     def items(self) -> list[InventoryItem]:
@@ -70,16 +75,11 @@ class InventoryPage(BasePage):
 
     @property
     def item_names(self):
-        return self.page.get_by_test_id("inventory-item-name")
-
-    @property
-    def item_prices(self):
-        return self.page.get_by_test_id("inventory-item-price")
+        return self._rows.names
 
     @property
     def item_price_values(self) -> list[Decimal]:
-        """Item prices as decimals, e.g. "$29.99" -> Decimal("29.99")."""
-        return [parse_price(p) for p in self.item_prices.all_inner_texts()]
+        return self._rows.price_values
 
     def add_items_at(self, indexes: list[int]) -> list[InventoryItem]:
         """Adds each indexed item to the cart, returning them in the same order for the

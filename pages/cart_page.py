@@ -3,25 +3,27 @@
 from decimal import Decimal
 
 from pages.base_page import BasePage
-from pages.money import parse_price
+from pages.components.inventory_row_list import InventoryRowList
 
 
 class CartPage(BasePage):
     URL = "/cart.html"
 
+    def __init__(self, page):
+        super().__init__(page)
+        self._rows = InventoryRowList(page)
+
     @property
     def cart_items(self):
-        return self.page.get_by_test_id("inventory-item")
+        return self._rows.cards
 
     @property
     def item_names(self):
-        return self.page.get_by_test_id("inventory-item-name")
+        return self._rows.names
 
     @property
     def item_price_values(self) -> list[Decimal]:
-        """Item prices as decimals, e.g. "$29.99" -> Decimal("29.99")."""
-        return [parse_price(p)
-                for p in self.page.get_by_test_id("inventory-item-price").all_inner_texts()]
+        return self._rows.price_values
 
     @property
     def checkout_button(self):
